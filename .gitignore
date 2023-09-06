@@ -97,7 +97,6 @@
 !*.vcproj
 !*.vcxproj
 !*.vcxproj.filters
-!*.sln
 !*.xcodeproj
 !*.xcconfig
 !*.vsprops
@@ -105,6 +104,7 @@
 !Makefile
 !Makefile.*
 !Settings.settings
+# !*.sln
 
 # Specific names
 !README
