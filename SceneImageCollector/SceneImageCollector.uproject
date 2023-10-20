@@ -7,7 +7,7 @@
 		{
 			"Name": "SceneImageCollector",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PostEngineInit"
 		}
 	],
 	"Plugins": [
@@ -21,11 +21,6 @@
 		{
 			"Name": "Composure",
 			"Enabled": true
-		},
-		{
-			"Name": "PathFollow",
-			"Enabled": true,
-			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/7c19d00ad42a4b67972eea383dedb7f3"
 		}
 	]
 }
