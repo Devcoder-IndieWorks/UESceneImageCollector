@@ -32,6 +32,7 @@ protected:
 private:
     void SetupCameraActor();
     void SetupImageWrapper();
+    void SetupForceGlobalLOD();
 
     void CaptureImage();
     void CaptureExrImage();
@@ -51,6 +52,7 @@ private:
 
     void ChangeGlobalLOD();
     void ResetGlobalLOD();
+    void ForceGlobalLOD( UWorld* InWorld );
 
 private:
     UPROPERTY( EditAnywhere, Category="SCI|Capture" )
@@ -62,7 +64,7 @@ private:
     UPROPERTY( EditAnywhere, Category="SCI|Capture" )
     ESCIImageFormat ImageFormat;
     UPROPERTY( EditAnywhere, Category="SCI|Capture" )
-    TObjectPtr<class ACameraActor> CameraActor;
+    TWeakObjectPtr<class ACameraActor> CameraActor;
 
     UPROPERTY( VisibleAnywhere, Category="SCI|Capture" )
     TObjectPtr<class USceneCaptureComponent2D> SceneCaptureComponent;
@@ -73,6 +75,10 @@ private:
     float MovementSpeed;
     UPROPERTY( EditAnywhere, Category="SCI|Settings" )
     float RotationSpeed;
+    UPROPERTY( EditAnywhere, Category="SCI|Settings" )
+    bool IsForceLODAtPlay;
+    UPROPERTY( EditAnywhere, Category="SCI|Settings" )
+    int32 LOD;
 
     UPROPERTY( EditAnywhere, Category="SCI|Settings|Keys" )
     FKey ForwardKey;
@@ -96,7 +102,6 @@ private:
     TSharedPtr<class IImageWrapper> ImageWrapper;
 
     int32 ImageCounter;
-    int32 LOD;
 
     TQueue<struct FSCIRenderRequest*> RenderRequestQueue;
     TQueue<struct FSCIFloatRenderRequest*> ExrRenderRequestQueue;

@@ -2,6 +2,8 @@
 #include <Engine/Engine.h>
 #if WITH_EDITOR
 #include <Engine/Canvas.h>
+#include <Editor.h>
+#include <LevelEditorSubsystem.h>
 #include <Components/SplineComponent.h>
 #include <Widgets/Input/SNumericEntryBox.h>
 #include <Widgets/Input/SVectorInputBox.h>
@@ -168,6 +170,23 @@ void FSCIPathControllerVisualizer::DrawVisualizationHUD( const UActorComponent* 
                 formatText = FText::FromString( TEXT( "Distance: {0}" ) );
                 text       = FText::Format( formatText, FText::AsNumber( points[ i ].InVal ) );
                 InCanvas->DrawShadowedText( screenPos.X + 20.0, screenPos.Y - 15.0, text, font, followerComp->AutoRollVisualConfig.PointColor );
+            }
+        }
+    }
+
+    if ( !followerComp->EventPointsVisualization.IsHideEventPointInfoText ) {
+        auto& points = followerComp->GetEventPoints().Points;
+        for ( int32 i = 0; i < points.Num(); ++i ) {
+            auto point = followerComp->GetLocationAtDistance( points[ i ].Distance, ESplineCoordinateSpace::World );
+            FVector2D screenPos;
+            if ( InView->WorldToPixel( point, screenPos ) ) {
+                auto formatText = FText::FromString( TEXT( "Name: {0}  Index: {1}" ) );
+                auto text       = FText::Format( formatText, FText::FromName( points[ i ].Name ), FText::AsNumber( i ) );
+                InCanvas->DrawShadowedText( screenPos.X, screenPos.Y - 30.0f, text, font, followerComp->EventPointsVisualization.EventPointsColor );
+
+                formatText = FText::FromString( TEXT( "Distance: {0}" ) );
+                text       = FText::Format( formatText, FText::AsNumber( points[ i ].Distance ) );
+                InCanvas->DrawShadowedText( screenPos.X, screenPos.Y - 15.0f, text, font, followerComp->EventPointsVisualization.EventPointsColor );
             }
         }
     }
@@ -647,6 +666,8 @@ FReply FSCIPathControllerVisualizer::DeleteSpeedPoints()
 
             if ( points.IsEmpty() )
                 followerComp->IsUseSpeedCurve = false;
+
+            InvalidateViewports();
         }
     }
 
@@ -676,6 +697,8 @@ FReply FSCIPathControllerVisualizer::DeleteRotationPoint()
 
             if ( points.IsEmpty() )
                 followerComp->IsUseRotationCurve = false;
+
+            InvalidateViewports();
         }
     }
 
@@ -695,5 +718,14 @@ USCIFollowerComponent* FSCIPathControllerVisualizer::GetEditedPathFollower()
 const USCIFollowerComponent* FSCIPathControllerVisualizer::GetEditedPathFollower() const
 {
     return (const_cast<FSCIPathControllerVisualizer*>(this))->GetEditedPathFollower();
+}
+
+void FSCIPathControllerVisualizer::InvalidateViewports()
+{
+    FSlateApplication::Get().DismissAllMenus();
+
+    auto levelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>();
+    if ( levelEditorSubsystem != nullptr )
+        levelEditorSubsystem->EditorInvalidateViewports();
 }
 #endif

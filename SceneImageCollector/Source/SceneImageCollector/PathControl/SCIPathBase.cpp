@@ -9,3 +9,8 @@ ASCIPathBase::ASCIPathBase()
 
     SetHidden( true );
 }
+
+USCIPathComponent* ASCIPathBase::GetPathComponent() const
+{
+    return PathToFollowerComp;
+}

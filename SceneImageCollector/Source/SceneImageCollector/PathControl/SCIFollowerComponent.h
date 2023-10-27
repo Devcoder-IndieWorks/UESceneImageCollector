@@ -87,6 +87,8 @@ public:
     const FInterpCurveFloat& GetSpeedCurve() const;
     FInterpCurveFloat& GetSpeedCurve();
 
+    void HandleLoopingType( bool InChangeReverse = true );
+
 #if WITH_EDITOR
     virtual void PostEditChangeProperty( FPropertyChangedEvent& InPropertyChangedEvent ) override;
 
@@ -179,7 +181,6 @@ private:
 
     void AlignToCurrentDistance();
     void LookAt();
-    void HandleLoopingType();
     void ProcessEvents( float InCurrentDistance );
     float UpdateSpeed( float InDistance );
 
@@ -332,6 +333,9 @@ public:
     FSCIEventPoints EventPoints;
 
 #if WITH_EDITORONLY_DATA
+    UPROPERTY()
+    TObjectPtr<class UInterpCurveEdSetup> CurveEdSetup;
+
     bool IsAlwaysOpenRollCurveEditor;
 #endif
 

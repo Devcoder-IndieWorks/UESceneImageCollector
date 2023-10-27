@@ -33,8 +33,9 @@ ASCISceneCaptureActor::ASCISceneCaptureActor( const FObjectInitializer& ObjectIn
     ImageFormat      = ESCIImageFormat::PNG;
     ImageCounter     = 0;
     LOD              = 0;
+    IsForceLODAtPlay = false;
 
-    EnableDefaultInputBindings = true;
+    EnableDefaultInputBindings = false;
     MovementSpeed = 100.0f;
     RotationSpeed = 50.0f;
 
@@ -56,6 +57,7 @@ void ASCISceneCaptureActor::BeginPlay()
     InitializeDefaultInputBindings();
     SetupImageWrapper();
     SetupCameraActor();
+    SetupForceGlobalLOD();
 }
 
 void ASCISceneCaptureActor::InitializeDefaultInputBindings()
@@ -103,7 +105,7 @@ void ASCISceneCaptureActor::InitializeDefaultInputBindings()
 
 void ASCISceneCaptureActor::AddXPositionOfLocation( float InValue )
 {
-    if ( CameraActor != nullptr ) {
+    if ( CameraActor.IsValid() ) {
         auto loc = CameraActor->GetActorLocation();
         FVector newLoc( loc.X + (InValue * MovementSpeed * GetWorld()->GetDeltaSeconds()), loc.Y, loc.Z );
         CameraActor->SetActorLocation( newLoc );
@@ -112,7 +114,7 @@ void ASCISceneCaptureActor::AddXPositionOfLocation( float InValue )
 
 void ASCISceneCaptureActor::AddYPositionOfLocation( float InValue )
 {
-    if ( CameraActor != nullptr ) {
+    if ( CameraActor.IsValid() ) {
         auto loc = CameraActor->GetActorLocation();
         FVector newLoc( loc.X, loc.Y + (InValue * MovementSpeed * GetWorld()->GetDeltaSeconds()), loc.Z );
         CameraActor->SetActorLocation( newLoc );
@@ -121,7 +123,7 @@ void ASCISceneCaptureActor::AddYPositionOfLocation( float InValue )
 
 void ASCISceneCaptureActor::AddZPositionOfLocation( float InValue )
 {
-    if ( CameraActor != nullptr ) {
+    if ( CameraActor.IsValid() ) {
         auto loc = CameraActor->GetActorLocation();
         FVector newLoc( loc.X, loc.Y, loc.Z + (InValue * MovementSpeed * GetWorld()->GetDeltaSeconds()) );
         CameraActor->SetActorLocation( newLoc );
@@ -130,7 +132,7 @@ void ASCISceneCaptureActor::AddZPositionOfLocation( float InValue )
 
 void ASCISceneCaptureActor::AddTurnOfRotation( float InValue )
 {
-    if ( CameraActor != nullptr ) {
+    if ( CameraActor.IsValid() ) {
         auto rot = CameraActor->GetActorRotation();
         FRotator newRot( rot.Pitch, rot.Yaw + (InValue * RotationSpeed * GetWorld()->GetDeltaSeconds()), rot.Roll );
         CameraActor->SetActorRotation( newRot );
@@ -139,7 +141,7 @@ void ASCISceneCaptureActor::AddTurnOfRotation( float InValue )
 
 void ASCISceneCaptureActor::AddLookUpOfRotation( float InValue )
 {
-    if ( CameraActor != nullptr ) {
+    if ( CameraActor.IsValid() ) {
         auto rot = CameraActor->GetActorRotation();
         FRotator newRot( rot.Pitch + (InValue * RotationSpeed * GetWorld()->GetDeltaSeconds()), rot.Yaw, rot.Roll );
         CameraActor->SetActorRotation( newRot );
@@ -249,9 +251,7 @@ void ASCISceneCaptureActor::ChangeGlobalLOD()
     auto world = GetWorld();
     if ( world != nullptr ) {
         LOD++;
-        const FString LOD_COMMAND = FString::Printf( TEXT( "r.ForceLOD %i" ), LOD );
-
-        GEngine->Exec( world, *LOD_COMMAND );
+        ForceGlobalLOD( world );
     }
 }
 
@@ -260,7 +260,7 @@ void ASCISceneCaptureActor::ResetGlobalLOD()
     auto world = GetWorld();
     if ( world != nullptr ) {
         LOD = 0;
-        GEngine->Exec( world, TEXT( "r.ForceLOD 0" ) );
+        ForceGlobalLOD( world );
     }
 }
 
@@ -279,7 +279,7 @@ void ASCISceneCaptureActor::SetupImageWrapper()
 
 void ASCISceneCaptureActor::SetupCameraActor()
 {
-    if ( CameraActor == nullptr ) {
+    if ( !CameraActor.IsValid() ) {
         for ( TActorIterator<ACameraActor> iter( GetWorld() ); iter; ++iter ) {
             auto actor = *iter;
             if ( actor != nullptr ) {
@@ -288,9 +288,9 @@ void ASCISceneCaptureActor::SetupCameraActor()
             }
         }
     }
-    VCLOG( CameraActor != nullptr, Log, TEXT( "Selected camera actor: %s" ), *(CameraActor->GetName()) );
+    VCLOG( CameraActor.IsValid(), Log, TEXT( "Selected camera actor: %s" ), *(CameraActor->GetName()) );
 
-    if ( CameraActor != nullptr ) {
+    if ( CameraActor.IsValid() ) {
         auto cameraComponent = CameraActor->GetCameraComponent();
         if ( cameraComponent != nullptr ) {
             cameraComponent->PostProcessSettings.bOverride_BloomMethod = true;
@@ -300,11 +300,25 @@ void ASCISceneCaptureActor::SetupCameraActor()
         auto playerController = UGameplayStatics::GetPlayerController( GetWorld(), 0 );
         if ( ensure( playerController->IsValidLowLevel() ) ) {
             auto viewTarget = playerController->GetViewTarget();
-            playerController->SetViewTarget( CameraActor );
+            playerController->SetViewTarget( CameraActor.Get() );
             if ( viewTarget != nullptr )
                 viewTarget->SetActorHiddenInGame( true );
         }
     }
+}
+
+void ASCISceneCaptureActor::SetupForceGlobalLOD()
+{
+    auto world = GetWorld();
+
+    if ( IsForceLODAtPlay && (world != nullptr) )
+        ForceGlobalLOD( world );
+}
+
+void ASCISceneCaptureActor::ForceGlobalLOD( UWorld* InWorld )
+{
+    const FString LOD_COMMAND = FString::Printf( TEXT( "r.ForceLOD %i" ), LOD );
+    GEngine->Exec( InWorld, *LOD_COMMAND );
 }
 
 void ASCISceneCaptureActor::Tick( float InDeltaTime )
@@ -352,7 +366,6 @@ void ASCISceneCaptureActor::SaveImage()
 
             ImageWrapper->SetRaw( nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), RenderResolution.X, RenderResolution.Y, ERGBFormat::BGRA, 8 );
             const auto& imageData = ImageWrapper->GetCompressed( ImageFormat == ESCIImageFormat::PNG ? (int32)EImageCompressionQuality::Uncompressed : 0 );
-            //const auto& imageData = ImageWrapper->GetCompressed();
             AsyncSaveImageTask( imageData, fileName );
 
             ImageCounter++;
@@ -389,7 +402,7 @@ void ASCISceneCaptureActor::AsyncSaveImageTask( const TArray64<uint8>& InImage, 
 
 UCameraComponent* ASCISceneCaptureActor::GetCameraComponent() const
 {
-    return CameraActor != nullptr ? CameraActor->GetCameraComponent() : nullptr;
+    return CameraActor.IsValid() ? CameraActor->GetCameraComponent() : nullptr;
 }
 
 FIntPoint ASCISceneCaptureActor::GetRenderResolution() const

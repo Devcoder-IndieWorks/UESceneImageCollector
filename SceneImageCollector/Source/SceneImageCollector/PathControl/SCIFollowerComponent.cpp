@@ -400,15 +400,15 @@ void USCIFollowerComponent::FollowPath( float InFollowStep )
     auto bUpdatingSameComponent = (LocationComponent == RotationComponent) && (RotationComponent == RollComponent);
     auto bUpdateRotation        = IsFollowerRotation || IsUseRotationCurve || (LookAtComponent != nullptr && !IsLookAtEventIfNotStarted);
     if ( bUpdatingSameComponent && bUpdateRotation ) {
-        auto finalRotation = !IsRotationMaskLocal ? MaskRotation( currentRotation, newRotation ) : newRotation;
+        auto finalRotation = IsRotationMaskLocal ? MaskRotation( currentRotation, newRotation ) : newRotation;
 
-        VLOG( Log, TEXT( "Location: [%s], Rotation: [%s]" ), *(finalLocation.ToCompactString()), *(finalRotation.ToCompactString()) );
+        //VLOG( Log, TEXT( "Location: [%s], Rotation: [%s]" ), *(finalLocation.ToCompactString()), *(finalRotation.ToCompactString()) );
         LocationComponent->SetWorldLocationAndRotation( finalLocation, finalRotation, false, nullptr, teleportType );
     }
     else {
         LocationComponent->SetWorldLocation( finalLocation, false, nullptr, teleportType );
         if ( bUpdateRotation ) {
-            auto finalRotation = !IsRotationMaskLocal ? MaskRotation( currentRotation, newRotation ) : newRotation;
+            auto finalRotation = IsRotationMaskLocal ? MaskRotation( currentRotation, newRotation ) : newRotation;
 
             if ( RotationComponent == RollComponent ) {
                 RotationComponent->SetWorldRotation( finalRotation, false, nullptr, teleportType );
@@ -481,9 +481,6 @@ FRotator USCIFollowerComponent::ComputeNewRotation( const float InCurrentDistanc
     auto newRotation = IsFollowerRotation ? SplineToFollow->GetRotationAtDistanceAlongSpline( ROTATION_CURVE_DISTANCE, COORD_SPACE ) 
     : IsUseRotationCurve ? GetRotationAtDistance( ROTATION_CURVE_DISTANCE, COORD_SPACE ) : FRotator::ZeroRotator;
     newRotation = ModulateRotation( newRotation );
-
-    if ( IsRotationMaskLocal )
-        newRotation = MaskRotation( newRotation );
 
     auto newQuat = newRotation.Quaternion();
     if ( IsReverse && IsInvertRotationOnReverse )
@@ -571,19 +568,21 @@ void USCIFollowerComponent::HandleEndOfPath()
     }
 
     if ( endPointReached ) {
+        IsStarted = false;
+
         if ( IsReverse )
             OnReachedStart.Broadcast( this );
         else 
             OnReachedEnd.Broadcast( this );
 
-        if ( IsLoop )
+        if ( IsLoop ) {
             HandleLoopingType();
-        else
-            IsStarted = false;
+            IsStarted = true;
+        }
     }
 }
 
-void USCIFollowerComponent::HandleLoopingType()
+void USCIFollowerComponent::HandleLoopingType( bool InChangeReverse )
 {
     check( SplineToFollow.IsValid() );
 
@@ -597,7 +596,8 @@ void USCIFollowerComponent::HandleLoopingType()
             ElapsedTime = DistanceToTime( CurrentDistanceOnPath );
             break;
         case ESCILoopType::LT_PingPong:
-            Reverse( !IsReverse );
+            if ( InChangeReverse )
+                Reverse( !IsReverse );
             CurrentDistanceOnPath = IsReverse ? SplineToFollow->GetSplineLength() - 0.01f : 0.0f;
             ElapsedTime = IsReverse ? SplineToFollow->Duration - 0.01f : 0.0f;
             break;

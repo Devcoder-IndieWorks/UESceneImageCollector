@@ -56,6 +56,8 @@ private:
         return false;
     }
 
+    void InvalidateViewports();
+
 private:
     using TIndexArray = TArray<int32>;
     TIndexArray SelectedRotationPointIndex;

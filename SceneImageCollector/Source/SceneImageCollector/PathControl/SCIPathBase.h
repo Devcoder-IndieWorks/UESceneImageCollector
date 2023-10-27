@@ -10,6 +10,7 @@ class ASCIPathBase : public AActor
     GENERATED_BODY()
 public:
     ASCIPathBase();
+    class USCIPathComponent* GetPathComponent() const;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Path )

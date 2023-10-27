@@ -155,8 +155,6 @@ void FSCIPathControllerCustomization::CustomizeDetails( IDetailLayoutBuilder& In
                         auto distance = splineComp->GetSplineLength() / 5.0f;
                         auto& curve   = FollowerComponent->GetSpeedCurve();
                         curve.AddPoint( distance, 0.0f );
-                        if ( curve.Points.Num() == 1 )
-                            FollowerComponent->IsUseSpeedCurve = true;
                     }
                 }
                 return FReply::Handled();
@@ -193,7 +191,7 @@ void FSCIPathControllerCustomization::CustomizeDetails( IDetailLayoutBuilder& In
         .WholeRowContent() [
             SNew( SButton )
             .IsEnabled_Lambda( [this]{
-                return FollowerComponent->IsUseSpeedCurve && FollowerComponent->HasPath();
+                return FollowerComponent->IsUseRotationCurve && FollowerComponent->HasPath();
             } )
             .Text( FText::FromString( TEXT( "Create New Rotation Point" ) ) )
             .OnClicked_Lambda( [this]{
@@ -205,7 +203,7 @@ void FSCIPathControllerCustomization::CustomizeDetails( IDetailLayoutBuilder& In
                         auto& curve   = FollowerComponent->GetPathRoller().GetRollCurve();
                         curve.AddPoint( distance, rotation.Euler() );
                         if ( curve.Points.Num() == 1 )
-                            FollowerComponent->IsUseSpeedCurve = true;
+                            FollowerComponent->IsFollowerRotation = false;
                     }
                 }
                 return FReply::Handled();
@@ -266,6 +264,7 @@ TSharedRef<IDistributionCurveEditor> FSCIPathControllerCustomization::CreateCurv
     auto speedCurveDistrib = FollowerComponent->GetSpeedDistribution();
     curveEdSetup->AddCurveToCurrentTab( rollCurveDistrib, TEXT( "Rotation Curve" ), FColor::Red );
     curveEdSetup->AddCurveToCurrentTab( speedCurveDistrib, TEXT( "Speed Curve" ), FColor::Green );
+    FollowerComponent->CurveEdSetup = curveEdSetup;
 
     auto notify = new FSCICurveEdNotify( FollowerComponent->GetSpeedCurve(), FollowerComponent->GetPathRoller().GetRollCurve() );
     auto curveEditor = curveEditorModule->CreateCurveEditorWidget( curveEdSetup, notify );
