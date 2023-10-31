@@ -638,6 +638,8 @@ TSharedPtr<SWidget> FSCIPathControllerVisualizer::GenerateContextMenu() const
             menuBuilder.AddWidget( widget, FText::FromString( TEXT( "Distance" ) ) );
         }
         menuBuilder.EndSection();
+
+        return menuBuilder.MakeWidget();
     }
 
     return TSharedPtr<SWidget>();
