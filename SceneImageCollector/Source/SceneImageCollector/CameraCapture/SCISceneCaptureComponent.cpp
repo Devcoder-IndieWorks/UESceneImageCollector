@@ -9,7 +9,7 @@
 USCISceneCaptureComponent::USCISceneCaptureComponent( const FObjectInitializer& ObjectInitializer )
 : Super( ObjectInitializer )
 {
-    CaptureSource = ESceneCaptureSource::SCS_FinalToneCurveHDR;
+    CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
     ShowFlags.SetTemporalAA( true );
 }
 
@@ -25,6 +25,7 @@ void USCISceneCaptureComponent::SetupTextureTarget()
     if ( ensure( OwnerSceneCapture.IsValid() ) ) {
         auto imageFormat = OwnerSceneCapture->GetImageFormat();
         auto resolution  = OwnerSceneCapture->GetRenderResolution();
+		auto pixelFormat = EPixelFormat::PF_Unknown;
         if ( TextureTarget == nullptr ) {
             auto renderTarget = NewObject<UTextureRenderTarget2D>( this );
 
@@ -35,7 +36,6 @@ void USCISceneCaptureComponent::SetupTextureTarget()
             auto pixelFormat = (imageFormat == ESCIImageFormat::EXR) 
             ? PF_FloatRGBA 
             : PF_B8G8R8A8;
-            renderTarget->InitCustomFormat( resolution.X, resolution.Y, pixelFormat, false );
 
             renderTarget->TargetGamma = (imageFormat == ESCIImageFormat::EXR) 
             ? GEngine->GetDisplayGamma() 
@@ -55,11 +55,15 @@ void USCISceneCaptureComponent::SetupTextureTarget()
             TextureTarget->TargetGamma = (imageFormat == ESCIImageFormat::EXR) 
             ? GEngine->GetDisplayGamma() 
             : 1.2f;
-            TextureTarget->bForceLinearGamma = false;
+            TextureTarget->bForceLinearGamma = true;
 
-            TextureTarget->InitAutoFormat( resolution.X, resolution.Y );
-            TextureTarget->UpdateResourceImmediate( true );
+			pixelFormat = (imageFormat == ESCIImageFormat::EXR) 
+            ? PF_FloatRGBA 
+            : PF_B8G8R8A8;
         }
+
+		TextureTarget->InitCustomFormat( resolution.X, resolution.Y, pixelFormat, false );
+        TextureTarget->UpdateResourceImmediate( true );
     }
 }
 
